@@ -1,0 +1,203 @@
+# Crea issues de la actividad para repos creados desde GitHub Classroom.
+# Idempotente: crea solamente los issues faltantes por titulo.
+name: Setup assignment issues
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+  repository_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: setup-issues-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  ensure-assignment-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Crear issues faltantes de la actividad
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 << 'PY'
+          import json
+          import os
+          import textwrap
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          REPO = os.environ["GITHUB_REPOSITORY"]
+          TOKEN = os.environ["GITHUB_TOKEN"]
+          API = "https://api.github.com"
+          ISSUE_LABEL = "classroom-assignment"
+
+          ISSUES = [
+              {
+                  "title": "[Entrega 1] Componente presentacional CryptoCard",
+                  "body": """
+          ## Objetivo
+          Construir el componente presentacional puro `CryptoCard.jsx` consumiendo propiedades (props) para proyectar la identidad del criptoactivo y su variación diaria.
+
+          ## Qué debe cumplirse
+          - [ ] En `src/components/CryptoCard.jsx`, recibir la prop desestructurada `{ asset }`.
+          - [ ] Renderizar el contenedor principal con `<div className="crypto-card">`.
+          - [ ] Renderizar una imagen `<img />` con `src={asset.logo}`, `alt={`${asset.name} logo`}` y clase `crypto-logo`.
+          - [ ] Renderizar el contenedor `div.crypto-info` con `span.crypto-symbol` mostrando `asset.symbol` y `h2.crypto-name` mostrando `asset.name`.
+          - [ ] Renderizar el porcentaje de cambio `asset.change24h` con la clase `crypto-change` y clase condicional `positive` o `negative`.
+          - [ ] Comprobar con `bash scripts/classroom-check.sh crypto-card`.
+
+          ## Commit sugerido
+          ```
+          feat: implementar componente presentacional CryptoCard
+
+          Closes #1
+          ```
+          """,
+              },
+              {
+                  "title": "[Entrega 2] Navegación circular y sincronización con useEffect",
+                  "body": """
+          ## Objetivo
+          Implementar en `CryptoTicker.jsx` el estado del activo seleccionado (`index`), la navegación circular con botones interactivos y la sincronización de estado reactivo mediante `useEffect` al cambiar de activo.
+
+          ## Qué debe cumplirse
+          - [ ] Declarar el estado `index` inicializado en 0 (`useState(0)`).
+          - [ ] Declarar el estado `tickSegundos` inicializado en 0 (`useState(0)`).
+          - [ ] Implementar las funciones `anterior()` y `siguiente()` utilizando el operador módulo (`%`) sobre la longitud de `cryptosData`.
+          - [ ] Vincular los botones `← Anterior` y `Siguiente →` del footer a sus respectivas funciones manejadoras con `onClick`.
+          - [ ] Implementar un `useEffect` con arreglo de dependencias `[id]` que reinicie el estado `tickSegundos` a 0 cada vez que cambie el activo activo.
+          - [ ] Comprobar con `bash scripts/classroom-check.sh asset-sync`.
+
+          ## Commit sugerido
+          ```
+          feat: implementar navegacion circular y sincronizacion con useEffect
+
+          Closes #2
+          ```
+          """,
+              },
+              {
+                  "title": "[Entrega 3] Temporizador de tick en vivo y título con cleanup",
+                  "body": """
+          ## Objetivo
+          Configurar un efecto secundario que actualice el título de la pestaña del navegador con la cotización en vivo e inicie un intervalo de tiempo recurrente, implementando rigurosamente su función de limpieza (*cleanup*) para prevenir fugas de memoria.
+
+          ## Qué debe cumplirse
+          - [ ] Implementar un `useEffect` con dependencias `[symbol, price, change24h, tickSegundos]`.
+          - [ ] Actualizar dinámicamente `document.title` con el formato: `[BTC] $64,250.00 USD ▲ | CryptoPulse`.
+          - [ ] Iniciar un temporizador mediante `setInterval` que incremente `tickSegundos` cada segundo utilizando la forma funcional: `setTickSegundos(prev => prev + 1)`.
+          - [ ] **Retornar obligatoriamente la función de limpieza** que invoque `clearInterval(interval)`.
+          - [ ] Comprobar con `bash scripts/classroom-check.sh live-timer-cleanup`.
+
+          ## Commit sugerido
+          ```
+          feat: agregar timer de tick y document.title con cleanup
+
+          Closes #3
+          ```
+          """,
+              },
+              {
+                  "title": "[Entrega 4] Atajos globales de teclado con limpieza de listener",
+                  "body": """
+          ## Objetivo
+          Suscribir un listener global de teclado en el objeto `window` durante la fase de montaje del componente para permitir la navegación con flechas, garantizando su desuscripción al desmontar.
+
+          ## Qué debe cumplirse
+          - [ ] Implementar un `useEffect` con array de dependencias vacío `[]` para que se ejecute únicamente al montar el componente.
+          - [ ] Definir el manejador de eventos que evalúe si `e.key === 'ArrowLeft'` (llama a `anterior()`) o `e.key === 'ArrowRight'` (llama a `siguiente()`).
+          - [ ] Suscribir el listener con `window.addEventListener('keydown', onKey)`.
+          - [ ] **Retornar obligatoriamente la función de limpieza** que invoque `window.removeEventListener('keydown', onKey)`.
+          - [ ] Comprobar con `bash scripts/classroom-check.sh keyboard-listener-cleanup`.
+
+          ## Commit sugerido
+          ```
+          feat: registrar atajos de teclado con limpieza de event listener
+
+          Closes #4
+          ```
+          """,
+              },
+              {
+                  "title": "[Entrega 5] Control de ciclo de vida en App.jsx y validación de build",
+                  "body": """
+          ## Objetivo
+          Construir el interruptor de ciclo de vida en `App.jsx` que monte y desmonte condicionalmente el ticker en vivo, verificar el cumplimiento de linters canónicos y compilar la aplicación para producción.
+
+          ## Qué debe cumplirse
+          - [ ] En `src/App.jsx`, declarar el estado booleano `feedActivo` inicializado en `true` (`useState(true)`).
+          - [ ] Renderizar un botón con clase `toggle-feed-btn` que alterne el valor de `feedActivo`.
+          - [ ] Renderizar condicionalmente `<CryptoTicker />` únicamente cuando `feedActivo` sea verdadero.
+          - [ ] Ejecutar `npm run lint` y `npm run format:check` asegurando 0 errores de linters.
+          - [ ] Ejecutar `npm run build` y comprobar que la carpeta `dist/` se genera sin advertencias ni fallos.
+          - [ ] Pasar la suite completa con `npm test` (`bash scripts/classroom-check.sh all`).
+
+          ## Commit sugerido
+          ```
+          feat: integrar toggle de feed en App y validar build
+
+          Closes #5
+          ```
+          """,
+              },
+          ]
+
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {TOKEN}",
+              "X-GitHub-Api-Version": "2022-11-28",
+          }
+
+
+          def get_existing_issue_titles():
+              titles = set()
+              page = 1
+              while True:
+                  url = f"{API}/repos/{REPO}/issues?state=all&per_page=100&page={page}"
+                  req = urllib.request.Request(url, headers=headers)
+                  try:
+                      with urllib.request.urlopen(req) as resp:
+                          data = json.loads(resp.read().decode())
+                  except urllib.error.HTTPError as e:
+                      print(f"Error listando issues: {e.code} {e.reason}")
+                      return titles
+                  if not data:
+                      break
+                  for item in data:
+                      if "pull_request" not in item:
+                          titles.add(item["title"].strip())
+                  page += 1
+              return titles
+
+
+          def create_issue(title, body):
+              url = f"{API}/repos/{REPO}/issues"
+              payload = json.dumps({
+                  "title": title,
+                  "body": textwrap.dedent(body).strip(),
+                  "labels": [ISSUE_LABEL],
+              }).encode()
+              req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
+              try:
+                  with urllib.request.urlopen(req) as resp:
+                      print(f"Creado issue: {title}")
+              except urllib.error.HTTPError as e:
+                  print(f"Fallo al crear '{title}': {e.code} {e.read().decode()}")
+
+
+          existing = get_existing_issue_titles()
+          for spec in ISSUES:
+              if spec["title"] in existing:
+                  print(f"Ya existe, omitiendo: {spec['title']}")
+                  continue
+              create_issue(spec["title"], spec["body"])
+          PY

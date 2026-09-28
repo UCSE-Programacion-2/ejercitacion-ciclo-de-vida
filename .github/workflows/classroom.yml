@@ -1,0 +1,116 @@
+name: Pruebas automáticas (Classroom)
+on:
+  push:
+  workflow_dispatch:
+  repository_dispatch:
+
+permissions:
+  checks: write
+  actions: read
+  contents: read
+
+jobs:
+  run-autograding-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Instalar dependencias
+        run: npm ci || npm install
+
+      - name: Estructura modular del proyecto
+        id: test-structure-check
+        uses: classroom-resources/autograding-io-grader@v1
+        with:
+          test-name: 'Estructura modular de carpetas y archivos fuente'
+          command: 'bash scripts/classroom-check.sh structure-check'
+          expected-output: 'CORRECTO'
+          comparison-method: exact
+          timeout: 5
+          max-score: 10
+
+      - name: Componente CryptoCard
+        id: test-crypto-card
+        uses: classroom-resources/autograding-io-grader@v1
+        with:
+          test-name: 'Componente presentacional CryptoCard y props'
+          command: 'bash scripts/classroom-check.sh crypto-card'
+          expected-output: 'CORRECTO'
+          comparison-method: exact
+          timeout: 5
+          max-score: 20
+
+      - name: Sincronización y navegación circular
+        id: test-asset-sync
+        uses: classroom-resources/autograding-io-grader@v1
+        with:
+          test-name: 'Navegación circular y sincronización de activo con useEffect'
+          command: 'bash scripts/classroom-check.sh asset-sync'
+          expected-output: 'CORRECTO'
+          comparison-method: exact
+          timeout: 5
+          max-score: 20
+
+      - name: Temporizador de tick y document.title con cleanup
+        id: test-live-timer-cleanup
+        uses: classroom-resources/autograding-io-grader@v1
+        with:
+          test-name: 'Temporizador en tiempo real y actualización de título con cleanup'
+          command: 'bash scripts/classroom-check.sh live-timer-cleanup'
+          expected-output: 'CORRECTO'
+          comparison-method: exact
+          timeout: 5
+          max-score: 20
+
+      - name: Atajos de teclado globales y cleanup
+        id: test-keyboard-listener-cleanup
+        uses: classroom-resources/autograding-io-grader@v1
+        with:
+          test-name: 'Suscripción a eventos globales de teclado con desuscripción en cleanup'
+          command: 'bash scripts/classroom-check.sh keyboard-listener-cleanup'
+          expected-output: 'CORRECTO'
+          comparison-method: exact
+          timeout: 5
+          max-score: 15
+
+      - name: Control de ciclo de vida en App
+        id: test-app-lifecycle-toggle
+        uses: classroom-resources/autograding-io-grader@v1
+        with:
+          test-name: 'Renderizado condicional en App para montaje y desmontaje del ticker'
+          command: 'bash scripts/classroom-check.sh app-lifecycle-toggle'
+          expected-output: 'CORRECTO'
+          comparison-method: exact
+          timeout: 5
+          max-score: 10
+
+      - name: Compilación Vite para producción
+        id: test-build-check
+        uses: classroom-resources/autograding-io-grader@v1
+        with:
+          test-name: 'Compilación de producción exitosa con npm run build'
+          command: 'bash scripts/classroom-check.sh build-check'
+          expected-output: 'CORRECTO'
+          comparison-method: exact
+          timeout: 5
+          max-score: 5
+
+      - name: Generar reporte de autograding
+        uses: classroom-resources/autograding-grading-reporter@v1
+        env:
+          TEST-STRUCTURE-CHECK_RESULTS: '${{ steps.test-structure-check.outputs.result }}'
+          TEST-CRYPTO-CARD_RESULTS: '${{ steps.test-crypto-card.outputs.result }}'
+          TEST-ASSET-SYNC_RESULTS: '${{ steps.test-asset-sync.outputs.result }}'
+          TEST-LIVE-TIMER-CLEANUP_RESULTS: '${{ steps.test-live-timer-cleanup.outputs.result }}'
+          TEST-KEYBOARD-LISTENER-CLEANUP_RESULTS: '${{ steps.test-keyboard-listener-cleanup.outputs.result }}'
+          TEST-APP-LIFECYCLE-TOGGLE_RESULTS: '${{ steps.test-app-lifecycle-toggle.outputs.result }}'
+          TEST-BUILD-CHECK_RESULTS: '${{ steps.test-build-check.outputs.result }}'
+        with:
+          runners: test-structure-check,test-crypto-card,test-asset-sync,test-live-timer-cleanup,test-keyboard-listener-cleanup,test-app-lifecycle-toggle,test-build-check
